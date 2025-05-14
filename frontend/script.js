@@ -1,44 +1,68 @@
-// Register Page - Send OTP Button Click Event
-document.getElementById('sendOtpBtn').addEventListener('click', function() {
-    const email = document.getElementById('email').value;
+const form = document.querySelector('#register-form');
+const otpSection = document.querySelector('#otp-section');
+const otpForm = document.querySelector('#otp-form');
 
-    // Simulate sending OTP (Replace with actual API call in backend later)
-    if (email) {
-        alert("OTP sent to " + email);
-        // Simulate OTP code
-        localStorage.setItem('otp', '123456'); // Just for testing, will be replaced with actual API later
-    } else {
-        alert("Please enter a valid email");
+let userEmail = '';
+let userPassword = '';
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.querySelector('#email').value;
+    const password = document.querySelector('#password').value;
+    const confirmPassword = document.querySelector('#confirm-password').value;
+
+    if (password !== confirmPassword) {
+        alert('Passwords do not match');
+        return;
+    }
+
+    // Save details for OTP confirmation step
+    userEmail = email;
+    userPassword = password;
+
+    // Send OTP
+    try {
+        const response = await fetch('/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            document.querySelector('#register-section').style.display = 'none';
+            otpSection.style.display = 'block';
+        } else {
+            alert(data.message || 'Failed to send OTP');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error sending OTP');
     }
 });
 
-// Register Form Submit Logic
-document.getElementById('registerForm').addEventListener('submit', function(e) {
+otpForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    const otp = document.getElementById('otp').value;
 
-    // Check if passwords match and OTP is correct
-    if (password === confirmPassword && otp === localStorage.getItem('otp')) {
-        alert("Account created successfully!");
-        window.location.href = "login.html";
-    } else {
-        alert("Passwords don't match or OTP is incorrect!");
-    }
-});
+    const otp = document.querySelector('#otp').value;
 
-// Login Form Submit Logic (For now, just an alert)
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+    try {
+        const response = await fetch('/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, password: userPassword, otp })
+        });
 
-    // In actual implementation, you'd call your API here to check login credentials
-    if (email && password) {
-        alert("Logged in successfully!");
-        // Redirect to dashboard or another page after successful login
-    } else {
-        alert("Please fill out all fields!");
+        const data = await response.json();
+        if (data.success) {
+            alert('Registered successfully! You can now log in.');
+            window.location.href = '/login.html';
+        } else {
+            alert(data.message || 'Incorrect OTP');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error verifying OTP');
     }
 });
